@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Weather App</title>
+
+    <style>
+        body {
+
+
+
+            font-family: Arial, sans-serif;
+
+            display: flex;
+
+            justify-content: center;
+
+            align-items: center;
+
+            height: 100vh;
+
+            margin: 0;
+
+            background-color: #f0f0f0;
+        }
+
+        .container {
+
+            text-align: center;
+
+            padding: 20px;
+
+            border-radius: 10px;
+
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+
+            background-color: #fff;
+
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="container">
+
+        <h1>Weather App</h1>
+
+        <p>Enter a city name to get the weather:</p>
+
+        <input type="text" id="cityInput" placeholder="Enter city name">
+
+        <button onclick="getWeather()">Get Weather</button>
+
+        <div id="weatherInfo"></div>
+
+    </div>
+
+    <script>
+         // Save input value to local storage
+         document.getElementById("cityInput").addEventListener("input", function() {
+            localStorage.setItem("cityInput", this.value);
+        });
+
+        // Retrieve input value from local storage
+        window.onload = function() {
+            if (localStorage.getItem("cityInput")) {
+                document.getElementById("cityInput").value = localStorage.getItem("cityInput");
+            }
+        };
+
+      //  const weatherInfo = document.getElementById("weatherInfo");
+        function getWeather() {
+
+            const city = document.getElementById("cityInput").value;
+
+            const apiKey = "0fb98056d14c0b3b443c610b4ebe30e9";
+
+            const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`;
+
+            const weatherInfo = document.getElementById("weatherInfo");
+            //         if (!city) {
+            //     alert('Please enter a city name.');
+            //     return;
+            // }
+
+            fetch(url)
+
+                .then(response => response.json())
+
+                .then(data => {
+                    if (data.cod === '400') {
+                        //  const weatherInfo = document.getElementById("weatherInfo");
+                        alert('Error: Nothing to geocode. Please enter a city name.');
+                        //  return   weatherInfo.innerHTML = "<p>Error: Nothing to geocode. Please enter a valid city name.</p>";
+                    } else if (data.cod === '404') {
+                        alert('City not found! Please enter valid a city name.');
+                        //  const weatherInfo = document.getElementById("weatherInfo");
+                        //return       weatherInfo.innerHTML = "<p>city not found</p>";
+                    };
+                    console.log(data);
+                    console.log(url);
+
+                    // function checkCity(city) {
+                    //     return fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric`)
+                    //         .then(response => response.json())
+                    //         .then(data => {
+                    //             if (data.length > 0) {
+                    //                 console.log(`${city} found!`);
+                    //             } else {
+                    //                 console.log(`${city} not found.`);
+                    //             }
+                    //         })
+                    //         .catch(error => console.error('Error:', error));
+                    // }
+
+                    // let cityFound = false;
+                    // for (let city of cities) {
+                    //     if (city.toLowerCase() === inputCity.toLowerCase()) {
+                    //         cityFound = true;
+                    //         checkCity(city);
+                    //         break;
+                    //     }
+                    // }
+
+                    // if (!cityFound) {
+                    //     console.log(`${inputCity} not found in the list.`);
+                    // }
+                    const weatherInfo = document.getElementById("weatherInfo");
+
+                    weatherInfo.innerHTML = `
+
+
+
+<H2>${data.name}</H2>
+
+<p>${data.weather[0].description}</p> 
+<p>Temperature: ${data.main.temp}°C</p>
+
+<p>Humidity: ${data.main.humidity}%</p>
+`;
+                })
+                .catch(error => {
+                    console.error(
+                        'error fetching weather data:', error
+                    );
+
+                    //   const weatherInfo = document.getElementById("weatherInfo");
+
+                    // weatherInfo.innerHTML = "<p>failed to fetch data</p>";
+                })
+        }
+
+    </script>
+
+</body>
+
+</html>
