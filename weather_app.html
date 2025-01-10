@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,6 +15,7 @@
             margin: 0;
             background-color: #b7d6f5;
         }
+
         .container {
             text-align: center;
             padding: 20px;
@@ -21,31 +23,41 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             background-color: #bbceb9af;
         }
-        button {
+
+        button,
+        #favoriteButton {
             padding: 10px 15px;
             border: none;
             border-radius: 5px;
             background-color: #28a745;
             color: white;
             cursor: pointer;
+            margin: 5px;
         }
-        button:hover {
+
+        button:hover,
+        #favoriteButton:hover {
             background-color: #218838;
         }
+
         #loading {
             display: none;
             font-size: 16px;
             color: #007bff;
         }
+
         .weather-icon {
             width: 100px;
             height: auto;
         }
+
         .weather-container {
             display: flex;
             align-items: center;
+            justify-content: center;
             margin: 10px 0;
         }
+
         .temperature {
             font-size: 24px;
             font-weight: bold;
@@ -54,57 +66,118 @@
             padding: 5px;
             border-radius: 5px;
         }
-        label {
-            display: none; /* Hidden since we use select */
+
+        #favorites {
+            margin-top: 20px;
         }
-        #unitToggle {
-            margin: 10px 0; /* Added margin for spacing */
+
+        .favorite-city {
+            cursor: pointer;
+            color: #007bff;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <h1>Weather App</h1>
-        <p>Enter a city name to get the weather:</p>
+        <p>Enter a city name to get the current weather and 5-day forecast:</p>
         <input type="text" id="cityInput" placeholder="Enter city name" aria-label="City input">
         <button onclick="getWeather()">Get Weather</button>
+        <button id="favoriteButton" onclick="toggleFavorite()">Add to Favorites</button>
         <div id="loading">Loading...</div>
         <div id="weatherInfo" aria-live="polite"></div>
-        
+
         <label for="unitToggle">Select unit:</label>
         <select id="unitToggle">
             <option value="metric">Celsius</option>
             <option value="imperial">Fahrenheit</option>
         </select>
-    </div>
-    <script>
-        // Store city input in local storage
-        document.getElementById("cityInput").addEventListener("input", function() {
-            localStorage.setItem("cityInput", this.value);
-        });
 
-        // Load city input from local storage on window load
-        window.onload = function() {
+        <button id="next" style="display: none;">Next 5 Periods</button>
+        <button id="backToCurrent" style="display: none;" onclick="showCurrentWeather()">Back to Current
+            Weather</button>
+        <div id="favorites">
+            <h3>Favorites</h3>
+            <div id="favoritesList"></div>
+        </div>
+        <button id="clearFavorites">Clear All Favorites</button>
+    </div>
+
+    <script>
+        const apiKey = "0fb98056d14c0b3b443c610b4ebe30e9";
+        let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+        let forecastData = []; // Održavaćemo prognozu kao globalnu varijablu
+
+        // Load favorites from local storage
+        window.onload = function () {
             if (localStorage.getItem("cityInput")) {
                 document.getElementById("cityInput").value = localStorage.getItem("cityInput");
             }
+            renderFavorites();
         };
 
-        // Call getWeather on Enter key press
-        document.getElementById("cityInput").addEventListener("keypress", function(event) {
+        document.getElementById("cityInput").addEventListener("input", function () {
+            localStorage.setItem("cityInput", this.value);
+        });
+
+        document.getElementById("cityInput").addEventListener("keypress", function (event) {
             if (event.key === "Enter") {
                 getWeather();
             }
         });
 
+        document.getElementById("next").onclick = function () {
+            showNextForecast();
+        };
+
+        function toggleFavorite() {
+            const city = document.getElementById("cityInput").value.trim();
+            if (city && !favorites.includes(city)) {
+                favorites.push(city);
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+                renderFavorites();
+            }
+        }
+
+        function renderFavorites() {
+            const favoritesList = document.getElementById('favoritesList');
+            favoritesList.innerHTML = "";
+            favorites.forEach((city, index) => {
+                const favoriteElem = document.createElement('div');
+                const favSpan = document.createElement('span');
+                favSpan.textContent = city;
+
+                // Dodajte dugme za brisanje
+                const removeButton = document.createElement('button');
+                removeButton.className = 'Remove-city';
+                removeButton.textContent = 'X'; // ili možete staviti neki ikonski simbol
+                removeButton.style.marginLeft = '10px';
+                removeButton.onclick = () => {
+                    removeFavorite(index); // Pozivamo funkciju za brisanje
+                };
+
+                //favoriteElem.appendChild(removeButton);
+                favSpan.className = 'favorite-city';
+                favSpan.onclick = () => {
+                    document.getElementById("cityInput").value = city;
+                    getWeather();
+                };
+                favoritesList.append(favoriteElem, favSpan, removeButton);
+            });
+        }
+        <!-- JavaScript deo - dodavanje funkcionalnosti -->
+        document.getElementById("clearFavorites").addEventListener("click", function () {
+            favorites = []; // Praznimo niz omiljenih gradova
+            localStorage.removeItem('favorites'); // Brišemo omiljene iz localStorage
+            renderFavorites(); // Ažuriramo prikaz omiljenih
+        });
+
         function getWeather() {
             const city = document.getElementById("cityInput").value.trim();
-            const apiKey = "0fb98056d14c0b3b443c610b4ebe30e9";
-            const weatherInfo = document.getElementById("weatherInfo");
             const loading = document.getElementById("loading");
-            const unit = document.getElementById("unitToggle").value; // Get selected unit
-
-            // Clear previous data
+            const weatherInfo = document.getElementById("weatherInfo");
+            const unit = document.getElementById("unitToggle").value;
             weatherInfo.innerHTML = "";
             loading.style.display = "none";
 
@@ -115,10 +188,9 @@
 
             loading.style.display = "block";
 
-            // Construct URL based on selected unit
-            const url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=${unit}`;
-
-            fetch(url)
+            // Fetch current weather data
+            const currentWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=${unit}`;
+            fetch(currentWeatherUrl)
                 .then(response => response.json())
                 .then(data => {
                     loading.style.display = "none";
@@ -129,19 +201,22 @@
 
                     const weatherIcon = `http://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
                     const temperatureUnit = unit === "metric" ? "°C" : "°F";
-                    
+
+                    // Display current weather
                     weatherInfo.innerHTML = `
-                       <h2>${data.name}</h2>
-                       <p>${data.weather[0].description}</p>
-                       <div class="weather-container">
-                           <img src="${weatherIcon}" alt="${data.weather[0].description}" class="weather-icon">
-                           <p class="temperature">${data.main.temp}${temperatureUnit}</p>
-                       </div>
-                  
-                       <p>Humidity: ${data.main.humidity}%</p>
+                        <h2>${data.name}</h2>
+                        <p>${data.weather[0].description}</p>
+                        <div class="weather-container">
+                            <img src="${weatherIcon}" alt="${data.weather[0].description}" class="weather-icon">
+                            <p class="temperature">${data.main.temp}${temperatureUnit}</p>
+                        </div>
+                        <p>Humidity: ${data.main.humidity}%</p>
                         <p>Wind Speed: ${data.wind.speed} ${unit === "metric" ? "m/s" : "mph"}</p>
                         <p>Pressure: ${data.main.pressure} hPa</p>
                     `;
+
+                    // Učitajte prognozu, ali je ne prikazujte odmah
+                    fetchForecast(city, unit);
                 })
                 .catch(error => {
                     loading.style.display = "none";
@@ -149,6 +224,64 @@
                     weatherInfo.innerHTML = "<p>Failed to fetch data. Please try again later.</p>";
                 });
         }
+
+        function fetchForecast(city, unit) {
+            const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=${unit}`;
+
+            fetch(forecastUrl)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.cod !== "200") {
+                        return;
+                    }
+
+                    forecastData = data.list; // Sačuvajte sve podatke o prognozi
+                    document.getElementById("next").style.display = "inline"; // Prikazujemo dugme
+                    // document.getElementById("backToCurrent").style.display = "inline"; // Prikaži dugme za povratak na trenutnu prognozu
+                });
+        }
+
+        function showNextForecast() {
+            const weatherInfo = document.getElementById("weatherInfo");
+            const unit = document.getElementById("unitToggle").value;
+
+            if (forecastData.length > 0) {
+                // Uzmite sledećih 5 perioda
+                const nextPeriods = forecastData.splice(0, 5);
+
+                const forecastDataHTML = nextPeriods.map(item => {
+                    const icon = `http://openweathermap.org/img/wn/${item.weather[0].icon}@2x.png`;
+                    const temp = item.main.temp;
+                    const dateString = new Date(item.dt * 1000).toLocaleString();
+
+                    return `<div>
+                        <p>${dateString} - ${temp} ${unit === "metric" ? "°C" : "°F"}</p>
+                        <img src="${icon}" alt="${item.weather[0].description}" class="weather-icon">
+                    </div>`;
+                }).join('');
+
+                // Dodajte prognozu ispod trenutne
+                weatherInfo.innerHTML += `<h3>Next 5 Periods</h3>${forecastDataHTML}`;
+                document.getElementById("backToCurrent").style.display = "inline"; // Prikaži dugme za povratak na trenutnu prognozu
+
+            } else {
+                alert("No more periods available.");
+                document.getElementById("next").style.display = "none"; // Sakrijte dugme ako nema više podataka
+                document.getElementById("backToCurrent").style.display = "inline"; // Prikaži dugme za povratak na trenutnu prognozu
+            }
+        }
+        function showCurrentWeather() {
+            const city = document.getElementById("cityInput").value.trim();
+            // Poziva getWeather funkciju za trenutne vremenske podatke
+            getWeather();
+            document.getElementById("backToCurrent").style.display = "none"; // Sakriva dugme za povratak na trenutnu prognozu
+        }
+        function removeFavorite(index) {
+            favorites.splice(index, 1); // Uklonite omiljeni grad iz niza
+            localStorage.setItem('favorites', JSON.stringify(favorites)); // Ažurirajte localStorage
+            renderFavorites(); // Ažurirajte prikaz omiljenih
+        }
     </script>
 </body>
+
 </html>
